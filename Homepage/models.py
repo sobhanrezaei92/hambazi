@@ -32,8 +32,8 @@ def save_user_profile(sender, instance, **kwargs):
 class Category(models.Model):
     name = models.CharField(max_length=20)
     description = models.TextField(max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     slug = models.CharField(max_length=10, blank=True, null=True)
 
 
@@ -44,7 +44,7 @@ class Game(models.Model):
     category = models.ManyToManyField(Category)
     store_inventory = models.IntegerField(default=0)
     is_available = models.BooleanField()
-    price = models.IntegerField()
+    price = models.IntegerField(blank=True, null=True)
     rent_per_minute = models.IntegerField()
 
 
@@ -70,21 +70,21 @@ class Table(models.Model):
 
 class Coupon(models.Model):
     name = models.CharField(max_length=15, blank=True, null=True)
-    expire_date = models.DateTimeField()
+    expire_date = models.DateTimeField(blank=True, null=True)
     value = models.IntegerField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     description = models.CharField(max_length=30, blank=True, null=True)
-    usage_count = models.IntegerField()
+    usage_count = models.IntegerField(blank=True, null=True)
 
 
 class Order(models.Model):
-    coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE)
-    tip = models.IntegerField()
+    coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
+    tip = models.IntegerField(blank=True, null=True)
     table = models.ForeignKey(Table, on_delete=models.CASCADE)
     how_to_pay = models.CharField(choices=settings.HOW_TO_PAY, default='cash', max_length=10)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     is_paid = models.BooleanField(default=False)
 
 
@@ -92,7 +92,7 @@ class Basket(models.Model):
     customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
     coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
     orders = models.ForeignKey(Order, on_delete=models.CASCADE)
-    tables = models.ForeignKey(Table, on_delete=models.CASCADE)
+    tables = models.ForeignKey(Table, on_delete=models.CASCADE, blank=True, null=True)
 
     def calculate_price_basket(self):
         basket_foods = self.basketfood_set.all()
@@ -116,8 +116,8 @@ class Game_Time(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     basket = models.ManyToManyField(Basket)
 
     def calculate_total_price(self):
@@ -141,7 +141,7 @@ class Food(models.Model):
     name = models.CharField(max_length=20)
     description = models.TextField(max_length=75, blank=True, null=True)
     sales_price = models.IntegerField()  # gheymate furush
-    purchase_price = models.IntegerField()  # gheymate kharid
+    purchase_price = models.IntegerField(blank=True, null=True)  # gheymate kharid
     created_at = models.DateTimeField(auto_now_add=True)  # khudesh besaze moghe'e avalin bar
     updated_at = models.DateTimeField(auto_now=True)  # khudesh update kone har bar ke save shod
     is_available = models.BooleanField()

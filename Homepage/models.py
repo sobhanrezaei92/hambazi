@@ -1,0 +1,155 @@
+from django.db import models
+from djangoProject1 import settings
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True)
+    location = models.CharField(max_length=150, blank=True, null=True)
+    birth_date = models.DateTimeField(blank=True, null=True)
+    bio = models.TextField(max_length=500, blank=True, null=True)
+    is_employee = models.BooleanField(blank=True, null=True)
+    is_owner = models.BooleanField(blank=True, null=True)
+    Favorite_games = models.TextField(max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return self.user.username
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance).save()
+
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=20)
+    description = models.TextField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    slug = models.CharField(max_length=10, blank=True, null=True)
+
+
+class Game(models.Model):
+    name = models.CharField(max_length=20)
+    information = models.TextField(max_length=100, blank=True, null=True)
+    description = models.TextField(max_length=50, blank=True, null=True)
+    category = models.ManyToManyField(Category)
+    store_inventory = models.IntegerField(default=0)
+    is_available = models.BooleanField()
+    price = models.IntegerField()
+    rent_per_minute = models.IntegerField()
+
+
+class Customer(models.Model):
+    games = models.ManyToManyField(Game, through='Game_Time')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+
+class Table(models.Model):
+    table_number = models.IntegerField()
+    capacity = models.IntegerField()
+    current_capacity = models.IntegerField()
+    is_available = models.BooleanField()
+
+    def calculate_capacity(self):
+        if self.capacity == self.current_capacity:
+            return "Capacity is complete"
+        else:
+            return int(self.capacity - self.current_capacity)
+
+    remaining_capacity = property(calculate_capacity)
+
+
+class Coupon(models.Model):
+    name = models.CharField(max_length=15, blank=True, null=True)
+    expire_date = models.DateTimeField()
+    value = models.IntegerField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    description = models.CharField(max_length=30, blank=True, null=True)
+    usage_count = models.IntegerField()
+
+
+class Order(models.Model):
+    coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE)
+    tip = models.IntegerField()
+    table = models.ForeignKey(Table, on_delete=models.CASCADE)
+    how_to_pay = models.CharField(choices=settings.HOW_TO_PAY, default='cash', max_length=10)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    is_paid = models.BooleanField(default=False)
+
+
+class Basket(models.Model):
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
+    coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
+    # game_time = models.OneToOneField(Game_Time, on_delete=models.CASCADE, blank=True, null=True)
+    orders = models.ForeignKey(Order, on_delete=models.CASCADE)
+    tables = models.ForeignKey(Table, on_delete=models.CASCADE)
+
+    def calculate_price_basket(self):
+        basket_foods = self.basketfood_set.all()
+        basket_games = self.basketgame_set.all()
+        total_basket_food = 0
+        total_basket_game = 0
+        for basket_food in basket_foods:
+            total_basket_food += basket_food.food.sales_price * basket_food.number_of
+        for basket_game in basket_games:
+            total_basket_game += basket_game.game.price * basket_game.number_of
+
+
+class Game_Time(models.Model):
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    basket = models.ManyToManyField(Basket)
+
+    def calculate_total_price(self):
+        if self.id:
+            return int((self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute
+        else:
+            return 0
+
+    total_price = property(calculate_total_price)
+
+
+class Employee(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+
+class Owner(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+
+class Food(models.Model):
+    name = models.CharField(max_length=20)
+    description = models.TextField(max_length=75, blank=True, null=True)
+    sales_price = models.IntegerField()  # gheymate furush
+    purchase_price = models.IntegerField()  # gheymate kharid
+    created_at = models.DateTimeField(auto_now_add=True)  # khudesh besaze moghe'e avalin bar
+    updated_at = models.DateTimeField(auto_now=True)  # khudesh update kone har bar ke save shod
+    is_available = models.BooleanField()
+    basket = models.ManyToManyField(Basket, through='BasketFood')
+
+
+class BasketFood(models.Model):
+    number_of = models.IntegerField()
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
+    food = models.ForeignKey(Food, on_delete=models.CASCADE)
+
+
+class BasketGame(models.Model):
+    number_of = models.IntegerField()
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)

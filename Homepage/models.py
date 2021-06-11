@@ -91,19 +91,24 @@ class Order(models.Model):
 class Basket(models.Model):
     customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
     coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
-    # game_time = models.OneToOneField(Game_Time, on_delete=models.CASCADE, blank=True, null=True)
     orders = models.ForeignKey(Order, on_delete=models.CASCADE)
     tables = models.ForeignKey(Table, on_delete=models.CASCADE)
 
     def calculate_price_basket(self):
         basket_foods = self.basketfood_set.all()
         basket_games = self.basketgame_set.all()
+        game_times = self.game_time_set.all()
         total_basket_food = 0
         total_basket_game = 0
+        total_game_time = 0
         for basket_food in basket_foods:
             total_basket_food += basket_food.food.sales_price * basket_food.number_of
         for basket_game in basket_games:
             total_basket_game += basket_game.game.price * basket_game.number_of
+        for game_time in game_times:
+            total_game_time += game_time.total_price
+
+        return total_basket_food + total_basket_game + total_game_time
 
 
 class Game_Time(models.Model):

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import *
 
-Models = [Profile, Category, Customer, Order, Employee, Owner, Game, Coupon, Basket, Food, BasketFood]
+Models = [Profile, Category, Customer, Order, Employee, Owner, Game, Coupon, Food, BasketFood]
 admin.site.register(Models)
 
 
@@ -17,9 +17,10 @@ class Game_TimeAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Game_Time, Game_TimeAdmin)
-# def price_game_time() :
-#     M = end - start
-#     M = M *
-#     M = int(M)
-#     if end - start > 0 :
-#         return (M * 200 + "Toman")
+
+
+class Total_BasketAdmin(admin.ModelAdmin):
+    readonly_fields = ('total_basket',)
+
+
+admin.site.register(Basket, Total_BasketAdmin)

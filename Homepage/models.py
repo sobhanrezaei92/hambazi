@@ -36,6 +36,9 @@ class Category(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     slug = models.CharField(max_length=10, blank=True, null=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Game(models.Model):
     name = models.CharField(max_length=20)
@@ -47,10 +50,16 @@ class Game(models.Model):
     price = models.IntegerField(blank=True, null=True)
     rent_per_minute = models.IntegerField()
 
+    def __str__(self):
+        return self.name
+
 
 class Customer(models.Model):
     games = models.ManyToManyField(Game, through='Game_Time')
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.profile.user.username
 
 
 class Table(models.Model):
@@ -77,6 +86,9 @@ class Coupon(models.Model):
     description = models.CharField(max_length=30, blank=True, null=True)
     usage_count = models.IntegerField(blank=True, null=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Order(models.Model):
     coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
@@ -89,7 +101,8 @@ class Order(models.Model):
 
 
 class Basket(models.Model):
-    customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
+    # customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
     orders = models.ForeignKey(Order, on_delete=models.CASCADE)
     tables = models.ForeignKey(Table, on_delete=models.CASCADE, blank=True, null=True)
@@ -110,6 +123,11 @@ class Basket(models.Model):
 
         return total_basket_food + total_basket_game + total_game_time
 
+    total_basket = property(calculate_price_basket)
+
+    def __str__(self):
+        return self.customer.profile.user.username
+
 
 class Game_Time(models.Model):
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
@@ -128,9 +146,15 @@ class Game_Time(models.Model):
 
     total_price = property(calculate_total_price)
 
+    def __str__(self):
+        return self.customer.profile.user.username
+
 
 class Employee(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.profile.user.username
 
 
 class Owner(models.Model):
@@ -146,6 +170,9 @@ class Food(models.Model):
     updated_at = models.DateTimeField(auto_now=True)  # khudesh update kone har bar ke save shod
     is_available = models.BooleanField()
     basket = models.ManyToManyField(Basket, through='BasketFood')
+
+    def __str__(self):
+        return self.name
 
 
 class BasketFood(models.Model):

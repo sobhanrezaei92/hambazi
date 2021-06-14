@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import *
 
-Models = [Profile, Category, Customer, Order, Employee, Owner, Game, Coupon, Food, BasketFood]
+Models = [Profile, Category, Customer, Employee, Owner, Game, Coupon, Food, BasketFood]
 admin.site.register(Models)
 
 
@@ -24,3 +24,10 @@ class Total_BasketAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Basket, Total_BasketAdmin)
+
+
+class OrderAdmin(admin.ModelAdmin):
+    readonly_fields = ('calculate_order',)
+
+
+admin.site.register(Order, OrderAdmin)

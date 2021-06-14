@@ -98,14 +98,37 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_paid = models.BooleanField(default=False)
+    # Amount_of_cash_payment = models.IntegerField(default=0)
+    # Card_payment_amount = models.IntegerField()
+
+    def calculate_order(self):
+        baskets_order = self.baskets.all()
+        amount = 0
+        for basket in baskets_order:
+            amount += (basket.calculate_price_basket()) - self.coupon + self.tip
+        return amount
+
+    total_order = property(calculate_order)
+
+    # def pay(self):
+    # if self.Amount_of_cash_payment + self.Card_payment_amount == self.total_order:
+    # self.is_paid = True
+    # else:
+    # self.is_paid = False
+    # if self.Amount_of_cash_payment == 0:
+    # self.how_to_pay = 'card'
+    # elif self.Card_payment_amount == 0:
+    # self.how_to_pay = 'cash'
+    # else:
+    # self.how_to_pay = 'cash,card'
 
 
 class Basket(models.Model):
     # customer = models.OneToOneField(Customer, on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
-    orders = models.ForeignKey(Order, on_delete=models.CASCADE)
-    tables = models.ForeignKey(Table, on_delete=models.CASCADE, blank=True, null=True)
+    orders = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='baskets')
+    # tables = models.ForeignKey(Table, on_delete=models.CASCADE, blank=True, null=True)
 
     def calculate_price_basket(self):
         basket_foods = self.basketfood_set.all()
@@ -136,7 +159,7 @@ class Game_Time(models.Model):
     end_time = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    basket = models.ManyToManyField(Basket)
+    basket = models.ManyToManyField(Basket, )
 
     def calculate_total_price(self):
         if self.id:

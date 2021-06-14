@@ -122,7 +122,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 HOW_TO_PAY = [
     ('cash', 'نقدی'),
-    ('cart', 'کارت'),
+    ('card', 'کارت'),
+    ('cash,card', 'کارت و نقدی'),
 ]
 
 JOB_TITLE = [

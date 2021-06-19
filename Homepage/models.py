@@ -166,7 +166,7 @@ class Game_Time(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # basket = models.ManyToManyField(Basket, )
-
+    
     def calculate_total_price(self):
         if self.id:
             return int((self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute
@@ -216,11 +216,31 @@ class BasketGame(models.Model):
     # basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
 
+    def calculate_basket_game(self):
+        return self.number_of * self.game.price
+    
+    value = property(calculate_basket_game())
+
 
 class Line_items(models.Model):
     id_line_items = models.IntegerField()
-    food = models.ForeignKey(Food, on_delete=models.CASCADE)
-    game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    basket_food = models.ForeignKey(BasketFood, on_delete=models.CASCADE)
+    basket_game = models.ForeignKey(BasketGame, on_delete=models.CASCADE)
     game_time = models.ForeignKey(Game_Time, on_delete=models.CASCADE)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
+    def claculate_Line_items(self):
+        total_basket_food = BasketFood.objects.all()
+        total_basket_game = BasketGame.objects.all()
+        total_game_time = Game_Time.objects.all()
+        amount = 0
+        if BasketFood in Line_items:
+            for total_basket_food in total_basket_foods:
+                amount += self.BasketFood
+        elif Game in Line_items:
+            for total_basket_game in total_basket_games:
+                amount += self.BasketGame
+        elif Game_Time in Line_items:
+            for total_game_time in total_game_times:
+                amount += self.Game_Time
+        return amount

@@ -19,15 +19,21 @@ class Game_TimeAdmin(admin.ModelAdmin):
 admin.site.register(Game_Time, Game_TimeAdmin)
 
 
-class Total_BasketAdmin(admin.ModelAdmin):
-    readonly_fields = ('total_basket',)
+# class Total_BasketAdmin(admin.ModelAdmin):
+    # readonly_fields = ('total_basket',)
+class total_line_item_admin(admin.ModelAdmin):
+    readonly_fields = ['value_line_item']
 
-
-admin.site.register(Basket, Total_BasketAdmin)
+admin.site.register(Line_item, total_line_item_admin)
 
 
 class OrderAdmin(admin.ModelAdmin):
-    readonly_fields = ('calculate_order',)
+    readonly_fields = ['calculate_order',]
 
 
 admin.site.register(Order, OrderAdmin)
+
+
+class order_line_items(admin.TabularInline):
+    model = Line_item
+    readonly_fields = ['basket_food', 'basket_game', 'game_time', 'order',]

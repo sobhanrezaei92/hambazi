@@ -47,7 +47,7 @@ class Game(models.Model):
     category = models.ManyToManyField(Category)
     store_inventory = models.IntegerField(default=0)
     is_available = models.BooleanField()
-    price = models.IntegerField(blank=True, null=True)
+    price = models.IntegerField(default=0)
     rent_per_minute = models.IntegerField()
 
     def __str__(self):
@@ -74,6 +74,9 @@ class Table(models.Model):
         else:
             return int(self.capacity - self.current_capacity)
 
+    def __str__(self):
+        return " میز شماره" + str(self.table_number) + '، ' + str(self.capacity) + ' نفره'
+
     remaining_capacity = property(calculate_capacity)
 
 
@@ -85,14 +88,13 @@ class Coupon(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     description = models.CharField(max_length=30, blank=True, null=True)
     usage_count = models.IntegerField(blank=True, null=True)
-    id_coupon = models.IntegerField(default= 0)
 
     def __str__(self):
         return self.name
 
 
 class Order(models.Model):
-    coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, blank=True, null=True)
     tip = models.IntegerField(default=0)
     table = models.ForeignKey(Table, on_delete=models.CASCADE)
     how_to_pay = models.CharField(choices=settings.HOW_TO_PAY, default='cash', max_length=10)
@@ -103,19 +105,19 @@ class Order(models.Model):
     Card_payment_amount = models.IntegerField(default=0)
     discount = models.IntegerField(default=0, blank=True, null=True)  # mablaghi ke dasti vared mishe be onvane takhfif
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True)
-    
+    guest = models.IntegerField(default=1)
+
     def calculate_order(self):
+        amount = 0
         if self.id:
-            line_items_order = self.Line_item.all()
-            amount = 0
+            line_items_order = self.line_item_set.all()
             if line_items_order:
                 for line_item in line_items_order:
-                    if self.coupon.value == 0:
-                        amount += int(self.Line_item.value_line_item)
-                    else:
-                        amount += int((self.Line_item.value_line_item) - (self.Coupon.value))
-            else:
-                amount += int(self.Line_item.value_line_item) + int(self.tip) - int(self.discount)
+                    amount += int(line_item.value_line_item)
+
+            amount += int(self.tip) - int(self.discount)
+            if self.coupon:
+                amount -= self.coupon.value
             if self.Amount_of_cash_payment + self.Card_payment_amount == amount:
                 self.is_paid = True
             else:
@@ -130,35 +132,20 @@ class Order(models.Model):
 
     total_order = property(calculate_order)
 
+    def calculate_remained(self):
+        if self.id:
+            return self.total_order - (self.Card_payment_amount + self.Amount_of_cash_payment)
+
+    remained_amount = property(calculate_remained)
 
     def __str__(self):
-        return "Order" + ' ' + str(self.customer.Profile.user.username)
+        return "Order" + ' ' + str(self.customer.profile.user.username)
 
-    # class Basket(models.Model):
-    # customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    # coupon = models.OneToOneField(Coupon, on_delete=models.CASCADE, blank=True, null=True)
-    # orders = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='baskets')
 
-    # def calculate_price_basket(self):
-    # basket_foods = self.basketfood_set.all()
-    # basket_games = self.basketgame_set.all()
-    # game_times = self.game_time_set.all()
-    # total_basket_food = 0
-    # total_basket_game = 0
-    # total_game_time = 0
-    # for basket_food in basket_foods:
-    # total_basket_food += basket_food.food.sales_price * basket_food.number_of
-    # for basket_game in basket_games:
-    # total_basket_game += basket_game.game.price * basket_game.number_of
-    # for game_time in game_times:
-    # total_game_time += game_time.total_price
-
-    # return total_basket_food + total_basket_game + total_game_time
-
-    # total_basket = property(calculate_price_basket)
-
-    # def __str__(self):
-    # return self.customer.profile.user.username
+@receiver(post_save, sender=Order)
+def save_table(sender, instance, **kwargs):
+    instance.table.current_capacity = instance.guest
+    instance.table.save()
 
 
 class Game_Time(models.Model):
@@ -168,12 +155,14 @@ class Game_Time(models.Model):
     end_time = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    number_of_players = models.IntegerField(default=1)
 
     # basket = models.ManyToManyField(Basket, )
-    
+
     def calculate_total_price(self):
         if self.id:
-            return int((self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute
+            return int(int((
+                                   self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute * self.number_of_players)
         else:
             return 0
 
@@ -193,17 +182,31 @@ class Employee(models.Model):
 class Owner(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return self.profile.user.username
+
+
+class Category_Food(models.Model):
+    name = models.CharField(max_length=15)
+    description = models.TextField(max_length=50, blank=True, null=True)
+    crated_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    slug = models.CharField(max_length=10, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
 
 class Food(models.Model):
     name = models.CharField(max_length=20)
     description = models.TextField(max_length=75, blank=True, null=True)
-    sales_price = models.IntegerField()  # gheymate furush
-    purchase_price = models.IntegerField(blank=True, null=True)  # gheymate kharid
+    sales_price = models.IntegerField(default=0, blank=True, null=True)  # gheymate furush
+    purchase_price = models.IntegerField(blank=True, null=True, default=0)  # gheymate kharid
     created_at = models.DateTimeField(auto_now_add=True)  # khudesh besaze moghe'e avalin bar
     updated_at = models.DateTimeField(auto_now=True)  # khudesh update kone har bar ke save shod
-    is_available = models.BooleanField()
+    is_available = models.BooleanField(blank=True, null=True)
 
-    # basket = models.ManyToManyField(Basket, through='BasketFood')
+    category_food = models.ForeignKey(Category_Food, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -211,45 +214,54 @@ class Food(models.Model):
 
 class BasketFood(models.Model):
     number_of = models.IntegerField()
-    # basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
     food = models.ForeignKey(Food, on_delete=models.CASCADE)
 
     def calculate_basket_food(self):
-        return int((self.number_of) * (self.food.sales_price))
+        return int(self.number_of * self.food.sales_price)
 
     value_food = property(calculate_basket_food)
 
+    def __str__(self):
+        return self.food.name
+
+
 class BasketGame(models.Model):
     number_of = models.IntegerField()
-    # basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
 
     def calculate_basket_game(self):
-        return int((self.number_of) * (self.game.price))
-    
+        amount = 0
+        if self.id:
+            amount = self.number_of * self.game.price
+        return amount
+
     value_game = property(calculate_basket_game)
+
+    def __str__(self):
+        return self.game.name + ' ' + str(self.number_of)
 
 
 class Line_item(models.Model):
-    id_line_item = models.IntegerField()
     basket_food = models.ForeignKey(BasketFood, on_delete=models.CASCADE, blank=True, null=True)
     basket_game = models.ForeignKey(BasketGame, on_delete=models.CASCADE, blank=True, null=True)
     game_time = models.ForeignKey(Game_Time, on_delete=models.CASCADE, blank=True, null=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
     def claculate_Line_items(self):
-        total_basket_food = BasketFood.objects.all()
-        total_basket_game = BasketGame.objects.all()
-        total_game_time = Game_Time.objects.all()
+        total_basket_foods = BasketFood.objects.filter(line_item=self).all()
+        total_basket_games = BasketGame.objects.filter(line_item=self).all()
+        total_game_times = Game_Time.objects.filter(line_item=self).all()
         amount = 0
-        if BasketFood in Line_item:
-            for total_basket_food in total_basket_foods:
-                amount += self.BasketFood.value_food
-        elif Game in Line_items:
-            for total_basket_game in total_basket_games:
-                amount += self.BasketGame.value_game
-        elif Game_Time in Line_items: # else
-            for total_game_time in total_game_times:
-                amount += self.Game_Time.total_price
+        if self.id:
+            if total_basket_foods:
+                for total_basket_food in total_basket_foods:
+                    amount += total_basket_food.value_food
+            if total_basket_games:
+                for total_basket_game in total_basket_games:
+                    amount += total_basket_game.value_game
+            if total_game_times:  # else
+                for total_game_time in total_game_times:
+                    amount += total_game_time.total_price
         return amount
+
     value_line_item = property(claculate_Line_items)

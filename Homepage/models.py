@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Model
+
 from djangoProject1 import settings
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -67,17 +69,17 @@ class Table(models.Model):
     capacity = models.IntegerField()
     current_capacity = models.IntegerField()
     is_available = models.BooleanField()
+    remaining_capacity = models.IntegerField(default=0)
 
     def calculate_capacity(self):
-        if self.capacity == self.current_capacity:
-            return "Capacity is complete"
-        else:
-            return int(self.capacity - self.current_capacity)
+        self.remaining_capacity = int(self.capacity - self.current_capacity)
+
+    def save(self, *args, **kwargs):
+        self.calculate_capacity()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return " میز شماره" + str(self.table_number) + '، ' + str(self.capacity) + ' نفره'
-
-    remaining_capacity = property(calculate_capacity)
 
 
 class Coupon(models.Model):
@@ -106,37 +108,38 @@ class Order(models.Model):
     discount = models.IntegerField(default=0, blank=True, null=True)  # mablaghi ke dasti vared mishe be onvane takhfif
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True)
     guest = models.IntegerField(default=1)
+    total_order = models.IntegerField(default=0)
+    remained_amount = models.IntegerField(default=0)
 
     def calculate_order(self):
         amount = 0
-        if self.id:
-            line_items_order = self.line_item_set.all()
-            if line_items_order:
-                for line_item in line_items_order:
-                    amount += int(line_item.value_line_item)
+        line_items_order = self.line_item_set.all()
+        if line_items_order:
+            for line_item in line_items_order:
+                amount += int(line_item.value_line_item)
 
-            amount += int(self.tip) - int(self.discount)
-            if self.coupon:
-                amount -= self.coupon.value
-            if self.Amount_of_cash_payment + self.Card_payment_amount == amount:
-                self.is_paid = True
-            else:
-                self.is_paid = False
-            if self.Amount_of_cash_payment == 0:
-                self.how_to_pay = 'card'
-            elif self.Card_payment_amount == 0:
-                self.how_to_pay = 'cash'
-            else:
-                self.how_to_pay = 'cash,card'
-        return amount
-
-    total_order = property(calculate_order)
+        amount += int(self.tip) - int(self.discount)
+        if self.coupon:
+            amount -= self.coupon.value
+        if self.Amount_of_cash_payment + self.Card_payment_amount == amount:
+            self.is_paid = True
+        else:
+            self.is_paid = False
+        if self.Amount_of_cash_payment == 0:
+            self.how_to_pay = 'card'
+        elif self.Card_payment_amount == 0:
+            self.how_to_pay = 'cash'
+        else:
+            self.how_to_pay = 'cash,card'
+        self.total_order = amount
 
     def calculate_remained(self):
-        if self.id:
-            return self.total_order - (self.Card_payment_amount + self.Amount_of_cash_payment)
+        self.remained_amount = self.total_order - (self.Card_payment_amount + self.Amount_of_cash_payment)
 
-    remained_amount = property(calculate_remained)
+    def save(self, *args, **kwargs):
+        self.calculate_order()
+        self.calculate_remained()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return "Order" + ' ' + str(self.customer.profile.user.username)
@@ -156,17 +159,15 @@ class Game_Time(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     number_of_players = models.IntegerField(default=1)
-
-    # basket = models.ManyToManyField(Basket, )
+    total_price = models.IntegerField(default=0)
 
     def calculate_total_price(self):
-        if self.id:
-            return int(int((
-                                   self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute * self.number_of_players)
-        else:
-            return 0
+        self.total_price = int(int((
+                                           self.end_time - self.start_time).seconds) / 60 * self.game.rent_per_minute * self.number_of_players)
 
-    total_price = property(calculate_total_price)
+    def save(self, *args, **kwargs):
+        self.calculate_total_price()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.customer.profile.user.username
@@ -215,11 +216,14 @@ class Food(models.Model):
 class BasketFood(models.Model):
     number_of = models.IntegerField()
     food = models.ForeignKey(Food, on_delete=models.CASCADE)
+    value_food = models.IntegerField(default=0)
 
     def calculate_basket_food(self):
-        return int(self.number_of * self.food.sales_price)
+        self.value_food = int(self.number_of * self.food.sales_price)
 
-    value_food = property(calculate_basket_food)
+    def save(self, *args, **kwargs):
+        self.calculate_basket_food()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.food.name
@@ -228,14 +232,15 @@ class BasketFood(models.Model):
 class BasketGame(models.Model):
     number_of = models.IntegerField()
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    value_game = models.IntegerField(default=0)
 
     def calculate_basket_game(self):
-        amount = 0
-        if self.id:
-            amount = self.number_of * self.game.price
-        return amount
+        amount = self.number_of * self.game.price
+        self.value_game = amount
 
-    value_game = property(calculate_basket_game)
+    def save(self, *args, **kwargs):
+        self.calculate_basket_game()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.game.name + ' ' + str(self.number_of)
@@ -246,22 +251,24 @@ class Line_item(models.Model):
     basket_game = models.ForeignKey(BasketGame, on_delete=models.CASCADE, blank=True, null=True)
     game_time = models.ForeignKey(Game_Time, on_delete=models.CASCADE, blank=True, null=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    value_line_item = models.IntegerField(default=0)
 
     def claculate_Line_items(self):
         total_basket_foods = BasketFood.objects.filter(line_item=self).all()
         total_basket_games = BasketGame.objects.filter(line_item=self).all()
         total_game_times = Game_Time.objects.filter(line_item=self).all()
         amount = 0
-        if self.id:
-            if total_basket_foods:
-                for total_basket_food in total_basket_foods:
-                    amount += total_basket_food.value_food
-            if total_basket_games:
-                for total_basket_game in total_basket_games:
-                    amount += total_basket_game.value_game
-            if total_game_times:  # else
-                for total_game_time in total_game_times:
-                    amount += total_game_time.total_price
-        return amount
+        if total_basket_foods:
+            for total_basket_food in total_basket_foods:
+                amount += total_basket_food.value_food
+        if total_basket_games:
+            for total_basket_game in total_basket_games:
+                amount += total_basket_game.value_game
+        if total_game_times:  # else
+            for total_game_time in total_game_times:
+                amount += total_game_time.total_price
+        self.value_line_item = amount
 
-    value_line_item = property(claculate_Line_items)
+    def save(self, *args, **kwargs):
+        self.claculate_Line_items()
+        super().save(*args, **kwargs)

@@ -42,7 +42,7 @@ class Line_Items_Inline(admin.TabularInline):
 
 
 class OrderAdmin(admin.ModelAdmin):
-    readonly_fields = ['calculate_order', 'how_to_pay', 'is_paid', 'remained_amount']
+    readonly_fields = ['how_to_pay', 'is_paid', 'remained_amount', 'total_order', ]
     inlines = [
         Line_Items_Inline,
     ]

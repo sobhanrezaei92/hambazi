@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Homepage',
     'nested_inline',
+    'graphene_django',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +135,8 @@ JOB_TITLE = [
     ('cashier', 'صندوقدار'),
     ('manager', 'مدیر داخلی'),
 ]
+
+GRAPHENE = {
+    "SCHEMA": "djangoProject1.schema.schema"
+
+}

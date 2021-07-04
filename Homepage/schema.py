@@ -2,6 +2,7 @@ import graphene
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
+from graphql_relay import from_global_id
 
 from .models import *
 
@@ -9,8 +10,24 @@ from .models import *
 class GameNode(DjangoObjectType):
     class Meta:
         model = Game
-        filter_fields = ["id"]
+        filter_fields = ["id", "name"]
         interfaces = (relay.Node,)
+
+
+class GameMutation(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        id = graphene.ID()
+
+    game = graphene.Field(GameNode)
+
+    @classmethod
+    def mutate(cls, root, info, name, id):
+        game = Game.objects.get(id=int(from_global_id(id)[1]))
+        game.name = name
+        game.save()
+
+        return GameMutation(game=game)
 
 
 class ProfileNode(DjangoObjectType):
@@ -20,11 +37,56 @@ class ProfileNode(DjangoObjectType):
         interfaces = (relay.Node,)
 
 
+class ProfileMutation(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        id = graphene.ID()
+
+    profile = graphene.Field(ProfileNode)
+
+    @classmethod
+    def mutate(cls, root, info, name, id):
+        profile = Profile.objects.get(id=int(from_global_id(id)[1]))
+        profile.name = name
+        profile.save()
+
+        return ProfileMutation(profile=profile)
+
+
 class CategoryNode(DjangoObjectType):
     class Meta:
         model = Category
         filter_fields = ["name"]
         interfaces = (relay.Node,)
+
+
+class CategoryMutation(graphene.Mutation):
+    class Arguments:
+        name = graphene.String()
+        id = graphene.ID(required=True)
+        description = graphene.String()
+        created_at = graphene.DateTime()
+        updated_at = graphene.DateTime()
+        slug = graphene.String()
+
+    category = graphene.Field(CategoryNode)
+
+    @classmethod
+    def mutate(cls, root, info, name, description, created_at, updated_at, slug, id):
+        category = Category.objects.get(id=int(from_global_id(id)[1]))
+        if name:
+            category.name = name
+        if description:
+            category.description = description
+        if created_at:
+            category.created_at = created_at
+        if updated_at:
+            category.updated_at = updated_at
+        if slug:
+            category.slug = slug
+        category.save()
+
+        return CategoryMutation(category=category)
 
 
 class CustomerNode(DjangoObjectType):
@@ -53,6 +115,23 @@ class OrderNode(DjangoObjectType):
         model = Order
         filter_fields = ["id"]
         interfaces = (relay.Node,)
+
+
+class OrderMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        coupon_id = graphene.ID(required=True)
+
+    Order = graphene.Field(OrderNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, coupon_id):
+        order = Order.objects.get(id=int(from_global_id(id)[1]))
+        coupon = Coupon.objects.get(id=int(from_global_id(coupon_id)[1]))
+        order.coupon = coupon
+        order.save()
+
+        return OrderMutation(order=order)
 
 
 class GameTimeNode(DjangoObjectType):
@@ -142,3 +221,9 @@ class Query(graphene.ObjectType):
     all_basketgames = DjangoFilterConnectionField(BasketGameNode)
     line_item = relay.Node.Field(LineItemNode)
     all_line_items = DjangoFilterConnectionField(LineItemNode)
+
+
+class Mutation(graphene.ObjectType):
+    update_game = GameMutation.Field()
+    update_category = CategoryMutation.Field()
+    update_order = OrderMutation.Field()

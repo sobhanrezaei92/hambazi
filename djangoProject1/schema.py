@@ -1,6 +1,7 @@
 import graphene
 
 from Homepage.schema import Query as HomepageQuery
+from Homepage.schema import Mutation as HomepageMutation
 
 
 class Query(HomepageQuery, graphene.ObjectType):
@@ -9,4 +10,8 @@ class Query(HomepageQuery, graphene.ObjectType):
     pass
 
 
-schema = graphene.Schema(query=Query)
+class Mutation(HomepageMutation, graphene.ObjectType):
+    pass
+
+
+schema = graphene.Schema(query=Query, mutation=Mutation)

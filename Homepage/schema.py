@@ -7,41 +7,6 @@ from graphql_relay import from_global_id
 from .models import *
 
 
-class GameNode(DjangoObjectType):
-    class Meta:
-        model = Game
-        filter_fields = ["id", "name"]
-        interfaces = (relay.Node,)
-
-
-class GameInput(graphene.InputObjectType):
-    name = graphene.String()
-    information = graphene.String()
-    description = graphene.String()
-    category = graphene.List(CategoryInput)
-    store_inventory = graphene.Int()
-    is_available = graphene.Boolean()
-    price = graphene.Int()
-    rent_per_minute = graphene.Int()
-
-
-class GameMutation(graphene.Mutation):
-    class Arguments:
-        name = graphene.String(required=True)
-        id = graphene.ID()
-        game = graphene.Argument(GameInput)
-
-    game = graphene.Field(GameNode)
-
-    @classmethod
-    def mutate(cls, root, info, name, id):
-        game = Game.objects.get(id=int(from_global_id(id)[1]))
-        game.name = name
-        game.save()
-
-        return GameMutation(game=game)
-
-
 class ProfileNode(DjangoObjectType):
     class Meta:
         model = Profile
@@ -61,15 +26,37 @@ class ProfileInput(graphene.InputObjectType):
 
 class ProfileMutation(graphene.Mutation):
     class Arguments:
-        name = graphene.String(required=True)
-        id = graphene.ID()
+        name = graphene.String()
+        id = graphene.ID(required=True)
+        user = graphene.AbstractType()
+        location = graphene.String()
+        birth_date = graphene.DateTime()
+        bio = graphene.String()
+        is_employee = graphene.Boolean()
+        is_owner = graphene.Boolean()
+        favorite_games = graphene.String()
 
     profile = graphene.Field(ProfileNode)
 
     @classmethod
-    def mutate(cls, root, info, name, id):
+    def mutate(cls, root, info, name, id, user, location, birth_date, bio, is_employee, is_owner, favorite_games):
         profile = Profile.objects.get(id=int(from_global_id(id)[1]))
-        profile.name = name
+        if name:
+            profile.name = name
+        if user:
+            profile.user = user
+        if location:
+            profile.location = location
+        if birth_date:
+            profile.birth_date = birth_date
+        if bio:
+            profile.bio = bio
+        if is_employee:
+            profile.is_employee = is_employee
+        if is_owner:
+            profile.is_owner = is_owner
+        if favorite_games:
+            profile.Favorite_games = favorite_games
         profile.save()
 
         return ProfileMutation(profile=profile)
@@ -80,6 +67,14 @@ class CategoryNode(DjangoObjectType):
         model = Category
         filter_fields = ["name"]
         interfaces = (relay.Node,)
+
+
+class CategoryInput(graphene.InputObjectType):
+    name = graphene.String()
+    description = graphene.String()
+    created_at = graphene.DateTime()
+    updated_at = graphene.DateTime()
+    slug = graphene.String()
 
 
 class CategoryMutation(graphene.Mutation):
@@ -111,6 +106,64 @@ class CategoryMutation(graphene.Mutation):
         return CategoryMutation(category=category)
 
 
+class GameNode(DjangoObjectType):
+    class Meta:
+        model = Game
+        filter_fields = ["id", "name"]
+        interfaces = (relay.Node,)
+
+
+class GameInput(graphene.InputObjectType):
+    name = graphene.String()
+    information = graphene.String()
+    description = graphene.String()
+    category = graphene.List(CategoryInput)
+    store_inventory = graphene.Int()
+    is_available = graphene.Boolean()
+    price = graphene.Int()
+    rent_per_minute = graphene.Int()
+
+
+class GameMutation(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        id = graphene.ID()
+        information = graphene.String()
+        description = graphene.String()
+        category = graphene.List(CategoryInput)
+        is_available = graphene.Boolean()
+        store_inventory = graphene.Int()
+        price = graphene.Int()
+        rent_per_minute = graphene.Int()
+        game = graphene.Argument(GameInput)
+
+    game = graphene.Field(GameNode)
+
+    @classmethod
+    def mutate(cls, root, info, name, id, information, description, category, is_available,
+               store_inventory, price, rent_per_minute, ):
+        game = Game.objects.get(id=int(from_global_id(id)[1]))
+        if name:
+            game.name = name
+        if information:
+            game.information = information
+        if description:
+            game.description = description
+        if category:
+            game.category = category
+        if is_available:
+            game.is_available = is_available
+        if store_inventory:
+            game.store_inventory = store_inventory
+        if price:
+            game.price = price
+        if rent_per_minute:
+            game.rent_per_minute = rent_per_minute
+        game.save()
+
+        return GameMutation(game=game)
+
+
 class CustomerNode(DjangoObjectType):
     class Meta:
         model = Customer
@@ -119,7 +172,7 @@ class CustomerNode(DjangoObjectType):
 
 
 class CustomerInput(graphene.InputObjectType):
-    # games = graphene.
+    games = graphene.List(GameInput)
     profile = graphene.List(ProfileInput)
 
 
@@ -127,7 +180,7 @@ class CustomerMutation(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         profile = graphene.List(ProfileInput)
-        # games = graphene.
+        games = graphene.List(GameInput)
 
     customer = graphene.Field(CustomerNode)
 
@@ -424,7 +477,7 @@ class OwnerMutation(graphene.Mutation):
         id = graphene.ID(required=True)
         profile = graphene.List(ProfileInput)
 
-    employee = graphene.Field(EmployeeNode)
+    owner = graphene.Field(OwnerNode)
 
     @classmethod
     def mutate(cls, root, info, id, profile, ):
@@ -451,26 +504,90 @@ class CategoryFoodInput(graphene.InputObjectType):
     slug = graphene.String()
 
 
-# class CategoryFoodMutation(graphene.Mutation):
-#     class Arguments:
-#         id = graphene.ID(required=True)
-#         name = graphene.String()
-#         description = graphene.String()
-#         created_at = graphene.DateTime()
-#         updated_at = graphene.DateTime()
-#         slug = graphene.String()
-#
-#     category_food = graphene.Field(CategoryFoodNode)
-#
-#     @classmethod
-#     def mutate(cls, root, info, id, name, description, created_at, updated_at, slug):
-#     category_food = Category_Food.objects.get(id=int(from_global_id(id)[1]))
+class CategoryFoodMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        description = graphene.String()
+        created_at = graphene.DateTime()
+        updated_at = graphene.DateTime()
+        slug = graphene.String()
+
+    category_food = graphene.Field(CategoryFoodNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, name, description, created_at, updated_at, slug):
+        category_food = Category_Food.objects.get(id=int(from_global_id(id)[1]))
+        if name:
+            category_food.name = name
+        if description:
+            category_food.description = description
+        if created_at:
+            category_food.crated_at = created_at
+        if updated_at:
+            category_food.updated_at = updated_at
+        if slug:
+            category_food.slug = slug
+        category_food.save()
+
+        return CategoryFoodMutation(category_food=category_food)
+
 
 class FoodNode(DjangoObjectType):
     class Meta:
         model = Food
         filter_fields = ["id"]
         interfaces = (relay.Node,)
+
+
+class FoodInput(graphene.InputObjectType):
+    name = graphene.String()
+    description = graphene.String()
+    sales_price = graphene.Int()
+    purchase_price = graphene.Int()
+    created_at = graphene.DateTime()
+    updated_at = graphene.DateTime()
+    is_available = graphene.Boolean()
+    category_food = graphene.List(CategoryFoodInput)
+
+
+class FoodMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        description = graphene.String()
+        sales_price = graphene.Int()
+        purchase_price = graphene.Int()
+        created_at = graphene.DateTime()
+        updated_at = graphene.DateTime()
+        is_available = graphene.Boolean()
+        category_food = graphene.List(CategoryFoodInput)
+
+    food = graphene.Field(FoodNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, name, description, sales_price, purchase_price,
+               created_at, updated_at, is_available, category_food):
+        food = Food.objects.get(id=int(from_global_id(id)[1]))
+        if name:
+            food.name = name
+        if description:
+            food.description = description
+        if sales_price:
+            food.sales_price = sales_price
+        if purchase_price:
+            food.purchase_price = purchase_price
+        if created_at:
+            food.created_at = created_at
+        if updated_at:
+            food.updated_at = updated_at
+        if is_available:
+            food.is_available = is_available
+        if category_food:
+            food.category_food = category_food
+        food.save()
+
+        return FoodMutation(food=food)
 
 
 class BasketFoodNode(DjangoObjectType):
@@ -480,6 +597,35 @@ class BasketFoodNode(DjangoObjectType):
         interfaces = (relay.Node,)
 
 
+class BasketFoodInput(graphene.InputObjectType):
+    number_of = graphene.Int()
+    food = graphene.List(FoodInput)
+    value_food = graphene.Int()
+
+
+class BasketFoodMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        number_of = graphene.Int()
+        food = graphene.List(FoodInput)
+        value_food = graphene.Int()
+
+    basket_food = graphene.Field(BasketFoodNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, number_of, food, value_food):
+        basket_food = BasketFood.objects.get(id=int(from_global_id(id)[1]))
+        if number_of:
+            basket_food.number_of = number_of
+        if food:
+            basket_food.food = food
+        if value_food:
+            basket_food.value_food = value_food
+        basket_food.save()
+
+        return BasketFoodMutation(basket_food=basket_food)
+
+
 class BasketGameNode(DjangoObjectType):
     class Meta:
         model = BasketGame
@@ -487,11 +633,77 @@ class BasketGameNode(DjangoObjectType):
         interfaces = (relay.Node,)
 
 
+class BasketGameInput(graphene.InputObjectType):
+    number_of = graphene.Int()
+    game = graphene.List(GameInput)
+    value_game = graphene.Int()
+
+
+class BasketGameMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID()
+        number_of = graphene.Int()
+        game = graphene.List(GameInput)
+        value_game = graphene.Int()
+
+    basket_game = graphene.Field(BasketGameNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, number_of, game, value_game):
+        basket_game = BasketGame.objects.get(id=int(from_global_id(id)[1]))
+        if number_of:
+            basket_game.number_of = number_of
+        if game:
+            basket_game.game = game
+        if value_game:
+            basket_game.value_game = value_game
+        basket_game.save()
+
+        return BasketGameMutation(basket_game=basket_game)
+
+
 class LineItemNode(DjangoObjectType):
     class Meta:
         model = Line_item
         filter_fields = ["id"]
         interfaces = (relay.Node,)
+
+
+class LineItemInput(graphene.InputObjectType):
+    basket_food = graphene.List(BasketFoodInput)
+    basket_game = graphene.List(BasketGameInput)
+    game_time = graphene.List(GameTimeInput)
+    order = graphene.List(OrderInput)
+    value_line_item = graphene.Int()
+
+
+class LineItemMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        basket_food = graphene.List(BasketFoodInput)
+        basket_game = graphene.List(BasketGameInput)
+        game_time = graphene.List(GameTimeInput)
+        order = graphene.List(OrderInput)
+        value_line_item = graphene.Int()
+
+    line_item = graphene.Field(LineItemNode)
+
+    @classmethod
+    def mutate(cls, root, info, id, basket_food, basket_game, game_time, order, value_line_item):
+        line_item = Line_item.objects.get(id=int(from_global_id(id)[1]))
+        if basket_food:
+            line_item.basket_food = basket_food
+        if basket_game:
+            line_item.basket_game = basket_game
+        if game_time:
+            line_item.game_time = game_time
+        if order:
+            line_item.order = order
+        if value_line_item:
+            line_item.value_line_item = value_line_item
+        line_item.save()
+
+        return LineItemMutation(line_item=line_item)
 
 
 class Query(graphene.ObjectType):
@@ -528,9 +740,18 @@ class Query(graphene.ObjectType):
 
 
 class Mutation(graphene.ObjectType):
-    update_game = GameMutation.Field()
-    update_category = CategoryMutation.Field()
-    update_order = OrderMutation.Field()
     update_profile = ProfileMutation.Field()
+    update_category = CategoryMutation.Field()
+    update_game = GameMutation.Field()
     update_customer = CustomerMutation.Field()
     update_table = TableMutation.Field()
+    update_coupon = CouponMutation.Field()
+    update_order = OrderMutation.Field()
+    update_game_time = GameTimeMutation.Field()
+    update_employee = EmployeeMutation.Field()
+    update_owner = OwnerMutation.Field()
+    update_category_food = CategoryFoodMutation.Field()
+    update_food = FoodMutation.Field()
+    update_basket_food = BasketFoodMutation.Field()
+    update_basket_game = BasketGameMutation.Field()
+    update_line_item = LineItemMutation.Field()

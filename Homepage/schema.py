@@ -15,7 +15,7 @@ class ProfileNode(DjangoObjectType):
 
 
 class ProfileInput(graphene.InputObjectType):
-    user = graphene.AbstractType()
+    # user = graphene.AbstractType()
     location = graphene.String()
     birth_date = graphene.DateTime()
     bio = graphene.String()
@@ -28,23 +28,24 @@ class ProfileMutation(graphene.Mutation):
     class Arguments:
         name = graphene.String()
         id = graphene.ID(required=True)
-        user = graphene.AbstractType()
+        # user = graphene.AbstractType()
         location = graphene.String()
         birth_date = graphene.DateTime()
         bio = graphene.String()
         is_employee = graphene.Boolean()
         is_owner = graphene.Boolean()
         favorite_games = graphene.String()
+        profile = graphene.Argument(ProfileInput)
 
     profile = graphene.Field(ProfileNode)
 
     @classmethod
-    def mutate(cls, root, info, name, id, user, location, birth_date, bio, is_employee, is_owner, favorite_games):
+    def mutate(cls, root, info, name, id, location, birth_date, bio, is_employee, is_owner, favorite_games):
         profile = Profile.objects.get(id=int(from_global_id(id)[1]))
         if name:
             profile.name = name
-        if user:
-            profile.user = user
+        # if user:
+        # profile.user = user
         if location:
             profile.location = location
         if birth_date:
@@ -85,6 +86,7 @@ class CategoryMutation(graphene.Mutation):
         created_at = graphene.DateTime()
         updated_at = graphene.DateTime()
         slug = graphene.String()
+        category = graphene.Argument(CategoryInput)
 
     category = graphene.Field(CategoryNode)
 
@@ -181,6 +183,7 @@ class CustomerMutation(graphene.Mutation):
         id = graphene.ID(required=True)
         profile = graphene.List(ProfileInput)
         games = graphene.List(GameInput)
+        customer = graphene.Argument(CustomerInput)
 
     customer = graphene.Field(CustomerNode)
 
@@ -218,6 +221,7 @@ class TableMutation(graphene.Mutation):
         current_capacity = graphene.Int()
         is_available = graphene.Boolean()
         remaining_capacity = graphene.Int()
+        table = graphene.Argument(TableInput)
 
     table = graphene.Field(TableNode)
 
@@ -266,6 +270,7 @@ class CouponMutation(graphene.Mutation):
         updated_at = graphene.DateTime()
         description = graphene.String()
         usage_count = graphene.Int()
+        coupon = graphene.Argument(CouponInput)
 
     coupon = graphene.Field(CouponNode)
 
@@ -334,6 +339,7 @@ class OrderMutation(graphene.Mutation):
         guest = graphene.Int()
         total_order = graphene.Int()
         remained_amount = graphene.Int()
+        order = graphene.Argument(OrderInput)
 
     Order = graphene.Field(OrderNode)
 
@@ -405,6 +411,7 @@ class GameTimeMutation(graphene.Mutation):
         updated_at = graphene.DateTime()
         number_of_players = graphene.Int()
         total_price = graphene.Int()
+        game_time = graphene.Argument(GameTimeInput)
 
     gametime = graphene.Field(GameTimeNode)
 
@@ -448,6 +455,7 @@ class EmployeeMutation(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         profile = graphene.List(ProfileInput)
+        employee = graphene.Argument(EmployeeInput)
 
     employee = graphene.Field(EmployeeNode)
 
@@ -476,6 +484,7 @@ class OwnerMutation(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         profile = graphene.List(ProfileInput)
+        owner = graphene.Argument(OwnerInput)
 
     owner = graphene.Field(OwnerNode)
 
@@ -512,6 +521,7 @@ class CategoryFoodMutation(graphene.Mutation):
         created_at = graphene.DateTime()
         updated_at = graphene.DateTime()
         slug = graphene.String()
+        category_food = graphene.Argument(CategoryFoodInput)
 
     category_food = graphene.Field(CategoryFoodNode)
 
@@ -562,6 +572,7 @@ class FoodMutation(graphene.Mutation):
         updated_at = graphene.DateTime()
         is_available = graphene.Boolean()
         category_food = graphene.List(CategoryFoodInput)
+        food = graphene.Argument(FoodInput)
 
     food = graphene.Field(FoodNode)
 
@@ -609,6 +620,7 @@ class BasketFoodMutation(graphene.Mutation):
         number_of = graphene.Int()
         food = graphene.List(FoodInput)
         value_food = graphene.Int()
+        basket_food = graphene.Argument(BasketFoodInput)
 
     basket_food = graphene.Field(BasketFoodNode)
 
@@ -645,6 +657,7 @@ class BasketGameMutation(graphene.Mutation):
         number_of = graphene.Int()
         game = graphene.List(GameInput)
         value_game = graphene.Int()
+        basket_game = graphene.Argument(BasketGameInput)
 
     basket_game = graphene.Field(BasketGameNode)
 
@@ -685,6 +698,7 @@ class LineItemMutation(graphene.Mutation):
         game_time = graphene.List(GameTimeInput)
         order = graphene.List(OrderInput)
         value_line_item = graphene.Int()
+        line_item = graphene.Argument(LineItemInput)
 
     line_item = graphene.Field(LineItemNode)
 
